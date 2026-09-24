@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="google-site-verification" content="12GYmpU0uS4yZnyZTQjDybTk7V4cKP05DmuCnk3r0E4">
+<title>pt2d</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 84 84'%3E%3Crect width='84' height='84' rx='18' fill='%234b3bff'/%3E%3Cpath d='M30 22 H48 a4 4 0 0 1 4 4 V60 a4 4 0 0 1 -4 4 H30 a4 4 0 0 1 -4 -4 V26 a4 4 0 0 1 4 -4 Z' stroke='white' stroke-width='3' fill='none' stroke-linejoin='round'/%3E%3Cpath d='M34 22 V19 a3 3 0 0 1 3 -3 h10 a3 3 0 0 1 3 3 V22' stroke='white' stroke-width='3' fill='none' stroke-linejoin='round'/%3E%3Cpath d='M31 38 H47 M31 46 H47 M31 54 H41' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f6f5f1;
+    --ink: #17171a;
+    --muted: #8a887f;
+    --accent: #4b3bff;
+    --accent-soft: rgba(75, 59, 255, 0.09);
+    --line: rgba(23, 23, 26, 0.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #111113;
+      --ink: #f1f0ec;
+      --muted: #8c8b92;
+      --accent: #8f86ff;
+      --accent-soft: rgba(143, 134, 255, 0.12);
+      --line: rgba(241, 240, 236, 0.14);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    padding-top: calc(24px + env(safe-area-inset-top, 0px));
+    padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+    cursor: pointer;
+    position: relative;
+  }
+
+  .stage {
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+  }
+
+  .glyph {
+    width: 84px;
+    height: 84px;
+    margin: 0 auto 28px;
+    position: relative;
+  }
+  .glyph svg {
+    width: 100%;
+    height: 100%;
+    animation: breathe 3.4s ease-in-out infinite;
+  }
+  @keyframes breathe {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.045); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .glyph svg { animation: none; }
+  }
+  .glyph .ring { stroke: var(--accent); }
+  .glyph .mark { stroke: var(--ink); }
+
+  h1 {
+    font-size: 30px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin: 0 0 10px;
+    line-height: 1.15;
+  }
+
+  p.sub {
+    color: var(--muted);
+    font-size: 15px;
+    margin: 0;
+    line-height: 1.5;
+  }
+  p.sub kbd {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    background: var(--accent-soft);
+    color: var(--accent);
+    padding: 2px 6px;
+    border-radius: 5px;
+  }
+
+  .status {
+    margin-top: 30px;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: default;
+  }
+  .status-inner {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--ink);
+    background: var(--accent-soft);
+    border: 1px solid var(--line);
+    padding: 9px 16px;
+    border-radius: 999px;
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .status-inner.show {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  .status-inner .dot {
+    display: inline-block;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-right: 8px;
+  }
+
+  /* Small dropdown pinned to the bottom of the page */
+  .bottom-controls {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+    cursor: default;
+  }
+
+  select.dropdown {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 5px 20px 5px 10px;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%238a887f' stroke-width='1.6'%3E%3Cpath d='M5 8l5 5 5-5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 7px center;
+    background-size: 10px;
+    width: 90px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  select.dropdown:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  input.custom-ext-input {
+    width: 56px;
+    text-align: center;
+    background-image: none;
+    padding: 5px 8px;
+  }
+  input.custom-ext-input.hidden {
+    display: none;
+  }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="glyph">
+      <svg viewBox="0 0 84 84" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle class="ring" cx="42" cy="42" r="40" stroke-width="1.5" opacity="0.35"/>
+        <path class="mark" d="M30 22 H48 a4 4 0 0 1 4 4 V60 a4 4 0 0 1 -4 4 H30 a4 4 0 0 1 -4 -4 V26 a4 4 0 0 1 4 -4 Z" stroke-width="2" stroke-linejoin="round"/>
+        <path class="mark" d="M34 22 V19 a3 3 0 0 1 3 -3 h10 a3 3 0 0 1 3 3 V22" stroke-width="2" stroke-linejoin="round"/>
+        <path class="mark" d="M31 38 H47 M31 46 H47 M31 54 H41" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    </div>
+
+    <h1>Paste anything.</h1>
+    <p class="sub">Click anywhere, or press <kbd>Ctrl</kbd>+<kbd>V</kbd> (<kbd>⌘V</kbd> on Mac). It downloads on its own.</p>
+
+    <div class="status">
+      <div class="status-inner" id="statusInner"><span class="dot"></span><span id="statusText"></span></div>
+    </div>
+  </div>
+
+  <div class="bottom-controls">
+    <select class="dropdown" id="typeDropdown">
+      <option value="auto" selected>Automatic</option>
+      <optgroup label="Text">
+        <option value="text:txt">.txt</option>
+        <option value="text:md">.md</option>
+        <option value="text:json">.json</option>
+        <option value="text:csv">.csv</option>
+        <option value="text:html">.html</option>
+        <option value="text:xml">.xml</option>
+        <option value="text:css">.css</option>
+        <option value="text:js">.js</option>
+        <option value="text:py">.py</option>
+        <option value="text:yaml">.yaml</option>
+        <option value="text:sql">.sql</option>
+        <option value="text:log">.log</option>
+        <option value="text:srt">.srt</option>
+        <option value="text:ini">.ini</option>
+      </optgroup>
+      <optgroup label="Document">
+        <option value="text:doc">.doc</option>
+        <option value="text:rtf">.rtf</option>
+        <option value="text:odt">.odt</option>
+        <option value="text:pdf">.pdf</option>
+      </optgroup>
+      <optgroup label="Picture">
+        <option value="picture:png">.png</option>
+        <option value="picture:jpg">.jpg</option>
+        <option value="picture:webp">.webp</option>
+      </optgroup>
+      <optgroup label="Custom">
+        <option value="custom">Type my own&hellip;</option>
+      </optgroup>
+    </select>
+    <input class="dropdown custom-ext-input hidden" id="customExtInput" type="text" placeholder=".ext" maxlength="10" autocomplete="off" autocapitalize="off" spellcheck="false">
+  </div>
+
+  <script>
+    // ---------- UI state ----------
+    const typeDropdown = document.getElementById('typeDropdown');
+    const customExtInput = document.getElementById('customExtInput');
+    typeDropdown.addEventListener('click', (e) => e.stopPropagation());
+    customExtInput.addEventListener('click', (e) => e.stopPropagation());
+
+    typeDropdown.addEventListener('change', () => {
+      customExtInput.classList.toggle('hidden', typeDropdown.value !== 'custom');
+      if (typeDropdown.value === 'custom') customExtInput.focus();
+    });
+
+    function selection() {
+      const val = typeDropdown.value;
+      if (val === 'auto') return { category: 'auto', ext: null };
+      if (val === 'custom') {
+        const clean = customExtInput.value.trim().replace(/^\.+/, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        return { category: 'custom', ext: clean || 'txt' };
+      }
+      const [category, ext] = val.split(':');
+      return { category, ext };
+    }
+
+    // ---------- Status pill ----------
+    const statusInner = document.getElementById('statusInner');
+    const statusText = document.getElementById('statusText');
+    let hideTimer = null;
+
+    function flash(text, ms) {
+      statusText.textContent = text;
+      statusInner.classList.add('show');
+      clearTimeout(hideTimer);
+      if (ms) {
+        hideTimer = setTimeout(() => statusInner.classList.remove('show'), ms);
+      }
+    }
+
+    // ---------- Download helpers ----------
+    function triggerDownload(blob, name) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    function stamp() {
+      const d = new Date();
+      const pad = n => String(n).padStart(2, '0');
+      return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+    }
+
+    function extFromImageMime(mime) {
+      const part = (mime.split('/')[1] || 'png').toLowerCase();
+      return part === 'jpeg' ? 'jpg' : part;
+    }
+
+    function mimeFromExt(ext) {
+      if (ext === 'jpg') return 'image/jpeg';
+      if (ext === 'webp') return 'image/webp';
+      return 'image/png';
+    }
+
+    function guessTextExtension(text) {
+      const trimmed = text.trim();
+
+      if ((trimmed.startsWith('{') && trimmed.endsWith('}')) ||
+          (trimmed.startsWith('[') && trimmed.endsWith(']'))) {
+        try { JSON.parse(trimmed); return 'json'; } catch (e) {}
+      }
+      if (/^<!doctype html/i.test(trimmed) || /^<html[\s>]/i.test(trimmed) ||
+          (/<\/?[a-z][\s\S]*>/i.test(trimmed) && trimmed.includes('</'))) {
+        return 'html';
+      }
+      if (/^<\?xml/i.test(trimmed)) return 'xml';
+
+      const lines = trimmed.split('\n').filter(l => l.length > 0);
+      if (lines.length >= 2) {
+        const counts = lines.slice(0, Math.min(lines.length, 10)).map(l => (l.match(/,/g) || []).length);
+        if (counts.every(c => c === counts[0]) && counts[0] >= 1) return 'csv';
+      }
+      if (/^#{1,6}\s/m.test(trimmed) || /^[-*]\s/m.test(trimmed) || /\*\*[^*]+\*\*/.test(trimmed)) {
+        return 'md';
+      }
+      return 'txt';
+    }
+
+    // Convert an image blob to a target format using canvas (only when needed)
+    function convertImage(blob, targetExt) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(blob);
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext('2d');
+          if (targetExt === 'jpg') {
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+          }
+          ctx.drawImage(img, 0, 0);
+          canvas.toBlob((outBlob) => {
+            URL.revokeObjectURL(url);
+            if (outBlob) resolve(outBlob); else reject(new Error('conversion failed'));
+          }, mimeFromExt(targetExt), 0.92);
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image load failed')); };
+        img.src = url;
+      });
+    }
+
+    // ---------- Core handlers, shared by paste + click-to-read ----------
+    async function handleImage(blob, sourceExt) {
+      const sel = selection();
+      if (sel.category === 'picture' && sel.ext !== sourceExt) {
+        try {
+          const converted = await convertImage(blob, sel.ext);
+          const name = 'pasted-' + stamp() + '.' + sel.ext;
+          triggerDownload(converted, name);
+          flash(name, 2600);
+          return;
+        } catch (e) {
+          flash('Could not convert image', 2400);
+          return;
+        }
+      }
+      const ext = (sel.category === 'picture' || sel.category === 'custom') ? sel.ext : sourceExt;
+      const name = 'pasted-' + stamp() + '.' + ext;
+      triggerDownload(blob, name);
+      flash(name, 2600);
+    }
+
+    function handleText(text) {
+      const sel = selection();
+      const ext = (sel.category === 'text' || sel.category === 'custom') ? sel.ext : guessTextExtension(text);
+      const name = 'pasted-' + stamp() + '.' + ext;
+      const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+      triggerDownload(blob, name);
+      flash(name, 2600);
+    }
+
+    function handleGenericFile(blob, name) {
+      triggerDownload(blob, name || ('pasted-' + stamp()));
+      flash(name || 'file', 2600);
+    }
+
+    // ---------- Keyboard paste (Ctrl+V / Cmd+V) ----------
+    async function handlePasteEvent(e) {
+      const cd = e.clipboardData;
+      if (!cd) return;
+
+      if (cd.files && cd.files.length > 0) {
+        e.preventDefault();
+        const file = cd.files[0];
+        handleGenericFile(file, file.name);
+        return;
+      }
+
+      const items = cd.items;
+      if (items) {
+        for (const item of items) {
+          if (item.kind === 'file' && item.type.indexOf('image') !== -1) {
+            e.preventDefault();
+            const blob = item.getAsFile();
+            await handleImage(blob, extFromImageMime(item.type));
+            return;
+          }
+          if (item.kind === 'file') {
+            e.preventDefault();
+            const blob = item.getAsFile();
+            handleGenericFile(blob, blob.name);
+            return;
+          }
+        }
+      }
+
+      const text = cd.getData('text/plain') || cd.getData('text');
+      if (text && text.trim().length > 0) {
+        e.preventDefault();
+        handleText(text);
+        return;
+      }
+
+      flash('Nothing usable on the clipboard', 2200);
+    }
+    document.addEventListener('paste', handlePasteEvent);
+
+    // ---------- Click anywhere to read the current clipboard directly ----------
+    async function handleClick(e) {
+      if (e.target.closest('.bottom-controls')) return;
+
+      if (!navigator.clipboard || !navigator.clipboard.read) {
+        flash('This browser needs Ctrl+V instead', 2400);
+        return;
+      }
+
+      try {
+        const clipboardItems = await navigator.clipboard.read();
+        for (const item of clipboardItems) {
+          const imageType = item.types.find(t => t.startsWith('image/'));
+          if (imageType) {
+            const blob = await item.getType(imageType);
+            await handleImage(blob, extFromImageMime(imageType));
+            return;
+          }
+          if (item.types.includes('text/plain')) {
+            const blob = await item.getType('text/plain');
+            const text = await blob.text();
+            if (text.trim().length > 0) {
+              handleText(text);
+              return;
+            }
+          }
+        }
+        flash('Clipboard is empty', 2200);
+      } catch (err) {
+        flash('Allow clipboard access, or use Ctrl+V', 2600);
+      }
+    }
+    document.body.addEventListener('click', handleClick);
+  </script>
+</body>
+</html>
