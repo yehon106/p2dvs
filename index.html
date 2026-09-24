@@ -133,7 +133,7 @@
     margin-right: 8px;
   }
 
-  /* Small dropdown pinned to the bottom of the page */
+  /* Dropdown pinned to the bottom of the page — 1.69x sized */
   .bottom-controls {
     position: fixed;
     left: 0;
@@ -141,27 +141,27 @@
     bottom: 0;
     display: flex;
     justify-content: center;
-    gap: 6px;
+    gap: 10px;
     padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
     cursor: default;
   }
 
   select.dropdown {
     font-family: 'IBM Plex Mono', monospace;
-    font-size: 10px;
+    font-size: 17px;
     color: var(--muted);
     background: var(--bg);
     border: 1px solid var(--line);
     border-radius: 999px;
-    padding: 5px 20px 5px 10px;
+    padding: 8px 34px 8px 17px;
     cursor: pointer;
     appearance: none;
     -webkit-appearance: none;
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%238a887f' stroke-width='1.6'%3E%3Cpath d='M5 8l5 5 5-5'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
-    background-position: right 7px center;
-    background-size: 10px;
-    width: 90px;
+    background-position: right 12px center;
+    background-size: 17px;
+    width: 152px;
     text-overflow: ellipsis;
     white-space: nowrap;
     overflow: hidden;
@@ -172,10 +172,10 @@
   }
 
   input.custom-ext-input {
-    width: 56px;
+    width: 95px;
     text-align: center;
     background-image: none;
-    padding: 5px 8px;
+    padding: 8px 14px;
   }
   input.custom-ext-input.hidden {
     display: none;
