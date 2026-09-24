@@ -3,8 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="google-site-verification" content="12GYmpU0uS4yZnyZTQjDybTk7V4cKP05DmuCnk3r0E4">
-<title>PASTE TO DOWNLOAD</title>
+<title>p2dvs</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 84 84'%3E%3Crect width='84' height='84' rx='18' fill='%234b3bff'/%3E%3Cpath d='M30 22 H48 a4 4 0 0 1 4 4 V60 a4 4 0 0 1 -4 4 H30 a4 4 0 0 1 -4 -4 V26 a4 4 0 0 1 4 -4 Z' stroke='white' stroke-width='3' fill='none' stroke-linejoin='round'/%3E%3Cpath d='M34 22 V19 a3 3 0 0 1 3 -3 h10 a3 3 0 0 1 3 3 V22' stroke='white' stroke-width='3' fill='none' stroke-linejoin='round'/%3E%3Cpath d='M31 38 H47 M31 46 H47 M31 54 H41' stroke='white' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -28,6 +27,14 @@
       --line: rgba(241, 240, 236, 0.14);
     }
   }
+  :root[data-theme="dark"] {
+    --bg: #111113;
+    --ink: #f1f0ec;
+    --muted: #8c8b92;
+    --accent: #8f86ff;
+    --accent-soft: rgba(143, 134, 255, 0.12);
+    --line: rgba(241, 240, 236, 0.14);
+  }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
   body {
@@ -40,7 +47,6 @@
     padding: 24px;
     padding-top: calc(24px + env(safe-area-inset-top, 0px));
     padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px));
-    cursor: pointer;
     position: relative;
   }
 
@@ -174,9 +180,45 @@
   input.custom-ext-input.hidden {
     display: none;
   }
+
+  .frame {
+    position: fixed;
+    inset: 3cm;
+    border: 1.5px solid var(--line);
+    border-radius: 28px;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .theme-toggle {
+    position: fixed;
+    top: calc(20px + env(safe-area-inset-top, 0px));
+    left: 20px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid var(--line);
+    background: var(--accent-soft);
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 3;
+  }
+  .theme-toggle svg {
+    width: 18px;
+    height: 18px;
+  }
 </style>
 </head>
 <body>
+  <div class="frame"></div>
+
+  <button class="theme-toggle" id="themeToggle" aria-label="Toggle dark mode">
+    <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"></svg>
+  </button>
+
   <div class="stage">
     <div class="glyph">
       <svg viewBox="0 0 84 84" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -188,7 +230,7 @@
     </div>
 
     <h1>Paste anything.</h1>
-    <p class="sub">Click anywhere, or press <kbd>Ctrl</kbd>+<kbd>V</kbd> (<kbd>⌘V</kbd> on Mac). It downloads on its own.</p>
+    <p class="sub">Press <kbd>Ctrl</kbd>+<kbd>V</kbd> (<kbd>⌘V</kbd> on Mac). It downloads on its own.</p>
 
     <div class="status">
       <div class="status-inner" id="statusInner"><span class="dot"></span><span id="statusText"></span></div>
@@ -233,6 +275,39 @@
   </div>
 
   <script>
+    // ---------- Theme toggle ----------
+    const SUN = '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+    const MOON = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/>';
+
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+
+    function effectiveTheme() {
+      const explicit = document.documentElement.getAttribute('data-theme');
+      if (explicit) return explicit;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    function renderThemeIcon() {
+      themeIcon.innerHTML = effectiveTheme() === 'dark' ? SUN : MOON;
+    }
+
+    try {
+      const saved = localStorage.getItem('p2dvs-theme');
+      if (saved === 'light' || saved === 'dark') {
+        document.documentElement.setAttribute('data-theme', saved);
+      }
+    } catch (e) { /* localStorage unavailable, fall back to system theme */ }
+    renderThemeIcon();
+
+    themeToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const next = effectiveTheme() === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', next);
+      renderThemeIcon();
+      try { localStorage.setItem('p2dvs-theme', next); } catch (e) { /* ignore */ }
+    });
+
     // ---------- UI state ----------
     const typeDropdown = document.getElementById('typeDropdown');
     const customExtInput = document.getElementById('customExtInput');
@@ -347,7 +422,7 @@
       });
     }
 
-    // ---------- Core handlers, shared by paste + click-to-read ----------
+    // ---------- Core handlers ----------
     async function handleImage(blob, sourceExt) {
       const sel = selection();
       if (sel.category === 'picture' && sel.ext !== sourceExt) {
@@ -422,40 +497,6 @@
       flash('Nothing usable on the clipboard', 2200);
     }
     document.addEventListener('paste', handlePasteEvent);
-
-    // ---------- Click anywhere to read the current clipboard directly ----------
-    async function handleClick(e) {
-      if (e.target.closest('.bottom-controls')) return;
-
-      if (!navigator.clipboard || !navigator.clipboard.read) {
-        flash('This browser needs Ctrl+V instead', 2400);
-        return;
-      }
-
-      try {
-        const clipboardItems = await navigator.clipboard.read();
-        for (const item of clipboardItems) {
-          const imageType = item.types.find(t => t.startsWith('image/'));
-          if (imageType) {
-            const blob = await item.getType(imageType);
-            await handleImage(blob, extFromImageMime(imageType));
-            return;
-          }
-          if (item.types.includes('text/plain')) {
-            const blob = await item.getType('text/plain');
-            const text = await blob.text();
-            if (text.trim().length > 0) {
-              handleText(text);
-              return;
-            }
-          }
-        }
-        flash('Clipboard is empty', 2200);
-      } catch (err) {
-        flash('Allow clipboard access, or use Ctrl+V', 2600);
-      }
-    }
-    document.body.addEventListener('click', handleClick);
   </script>
 </body>
 </html>
