@@ -9,6 +9,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<!-- Analytics: replace YOURCODE with your GoatCounter site code from goatcounter.com -->
+<script data-goatcounter="https://YOURCODE.goatcounter.com/count" async src="https://gc.zgo.at/count.js"></script>
 <style>
   :root {
     --bg: #f6f5f1;
@@ -406,7 +408,7 @@
     </div>
 
     <h1>Paste anything.</h1>
-    <p class="sub">Press <kbd>Ctrl</kbd>+<kbd>V</kbd> (<kbd>⌘V</kbd> on Mac), or drag a file in. It downloads &mdash; name it if you like.</p>
+    <p class="sub">Press <kbd>Ctrl</kbd>+<kbd>V</kbd> (<kbd>⌘V</kbd> on Mac), or drag a file in. It downloads instantly.</p>
 
     <div class="status">
       <div class="status-inner" id="statusInner"><span class="dot"></span><span id="statusText"></span></div>
@@ -689,26 +691,9 @@
     }
 
     // =====================================================================
-    // Download helpers — native Save dialog when available, with fallback
+    // Download helper — auto-named, instant download, no picker
     // =====================================================================
     async function triggerDownload(blob, suggestedName) {
-      if (window.showSaveFilePicker) {
-        try {
-          const handle = await window.showSaveFilePicker({ suggestedName });
-          const writable = await handle.createWritable();
-          await writable.write(blob);
-          await writable.close();
-          const finalName = handle.name || suggestedName;
-          recordStat(blob.size);
-          addToHistory(finalName, blob);
-          flash(finalName, 2600);
-          feedback();
-          return;
-        } catch (err) {
-          if (err && err.name === 'AbortError') return; // user cancelled the dialog
-          // fall through to anchor download on any other failure
-        }
-      }
       quickDownload(blob, suggestedName);
       recordStat(blob.size);
       addToHistory(suggestedName, blob);
