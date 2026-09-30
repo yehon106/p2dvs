@@ -638,7 +638,7 @@
       const zip = new JSZip();
       checked.forEach(idx => zip.file(history[idx].name, history[idx].blob));
       const zipBlob = await zip.generateAsync({ type: 'blob' });
-      quickDownload(zipBlob, 'pasted-' + stamp() + '.zip');
+      quickDownload(zipBlob, 'zip-' + stamp() + '.zip');
       flash('Downloaded .zip', 2600);
       feedback();
     });
@@ -704,7 +704,88 @@
     function stamp() {
       const d = new Date();
       const pad = n => String(n).padStart(2, '0');
-      return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}-${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+      return `${pad(d.getDate())}${pad(d.getMonth()+1)}-${pad(d.getHours())}.${pad(d.getMinutes())}.${pad(d.getSeconds())}`;
+    }
+
+    function sanitizeName(str) {
+      return (str || '')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .slice(0, 24);
+    }
+
+    function buildFilename(name, ext) {
+      const clean = sanitizeName(name) || 'file';
+      return `${clean}-${stamp()}.${ext}`;
+    }
+
+    // ---------- Text naming: pull a few meaningful keywords ----------
+    const STOPWORDS = new Set(['the','a','an','and','or','of','to','in','is','on','for','with','this','that','it','as','by','at','be','are','was','were','from','but','not','you','your','i','we','they','have','has','will','can']);
+    function deriveTextName(text, ext) {
+      if (['json','html','xml','csv','sql','yaml'].includes(ext)) return ext + '-data';
+      const words = text.trim().split(/\s+/)
+        .map(w => w.toLowerCase().replace(/[^a-z0-9]/g, ''))
+        .filter(w => w.length > 2 && !STOPWORDS.has(w));
+      const picked = words.slice(0, 3).join('-');
+      return picked || 'text';
+    }
+
+    // ---------- Image naming: real AI labeling via MobileNet (in-browser, free) ----------
+    let mobilenetModel = null;
+    let modelLoadingPromise = null;
+
+    function loadScriptOnce(src) {
+      return new Promise((resolve, reject) => {
+        if (document.querySelector('script[data-p2dvs-lib="' + src + '"]')) { resolve(); return; }
+        const s = document.createElement('script');
+        s.src = src;
+        s.dataset.p2dvsLib = src;
+        s.onload = resolve;
+        s.onerror = () => reject(new Error('failed to load ' + src));
+        document.head.appendChild(s);
+      });
+    }
+
+    async function getMobilenetModel() {
+      if (mobilenetModel) return mobilenetModel;
+      if (!modelLoadingPromise) {
+        modelLoadingPromise = (async () => {
+          await loadScriptOnce('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js');
+          await loadScriptOnce('https://cdn.jsdelivr.net/npm/@tensorflow-models/mobilenet@2.1.1/dist/mobilenet.min.js');
+          mobilenetModel = await mobilenet.load();
+          return mobilenetModel;
+        })();
+      }
+      return modelLoadingPromise;
+    }
+
+    function blobToImageElement(blob) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(blob);
+        img.onload = () => resolve({ img, url });
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('image load failed')); };
+        img.src = url;
+      });
+    }
+
+    async function labelImage(blob) {
+      let url = null;
+      try {
+        const model = await getMobilenetModel();
+        const { img, url: u } = await blobToImageElement(blob);
+        url = u;
+        const preds = await model.classify(img);
+        URL.revokeObjectURL(url);
+        if (preds && preds[0]) {
+          const raw = preds[0].className.split(',')[0];
+          return sanitizeName(raw) || 'image';
+        }
+      } catch (e) {
+        if (url) URL.revokeObjectURL(url);
+      }
+      return 'image';
     }
 
     function extFromImageMime(mime) {
@@ -780,28 +861,34 @@
       const maxDim = resizeMax();
       const needsProcessing = targetExt !== sourceExt || maxDim;
 
+      flash('Analyzing image\u2026', 0);
+      const label = await labelImage(blob);
+
+      let outBlob = blob;
       if (needsProcessing && (sel.category !== 'custom')) {
         try {
-          const processed = await processImage(blob, targetExt, maxDim);
-          await triggerDownload(processed, 'pasted-' + stamp() + '.' + targetExt);
-          return;
+          outBlob = await processImage(blob, targetExt, maxDim);
         } catch (e) {
           flash('Could not convert image', 2400);
           return;
         }
       }
-      await triggerDownload(blob, 'pasted-' + stamp() + '.' + targetExt);
+      await triggerDownload(outBlob, buildFilename(label, targetExt));
     }
 
     async function handleText(text) {
       const sel = selection();
       const ext = (sel.category === 'text' || sel.category === 'custom') ? sel.ext : guessTextExtension(text);
+      const name = deriveTextName(text, ext);
       const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-      await triggerDownload(blob, 'pasted-' + stamp() + '.' + ext);
+      await triggerDownload(blob, buildFilename(name, ext));
     }
 
     async function handleGenericFile(blob, name) {
-      await triggerDownload(blob, name || ('pasted-' + stamp()));
+      const dotIdx = (name || '').lastIndexOf('.');
+      const ext = dotIdx > -1 ? name.slice(dotIdx + 1) : 'bin';
+      const base = dotIdx > -1 ? name.slice(0, dotIdx) : (name || 'file');
+      await triggerDownload(blob, buildFilename(base, ext));
     }
 
     // =====================================================================
